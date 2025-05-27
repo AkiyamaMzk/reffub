@@ -102,7 +102,7 @@ $form.Add_DragDrop({
         # 根据平台选择远程仓库
         $platform = $comboBox.SelectedItem.ToString()
         if ($platform -eq "Gitee") {
-            git push origin master
+            git push gitee master
         } elseif ($platform -eq "GitHub") {
             git push github master
         }
