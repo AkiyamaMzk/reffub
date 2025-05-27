@@ -45,6 +45,13 @@ $comboBox.Items.AddRange(@("GitHub", "Gitee"))
 $comboBox.SelectedIndex = 0
 $form.Controls.Add($comboBox)
 
+# 新增拉取按钮
+$pullButton = New-Object System.Windows.Forms.Button
+$pullButton.Location = New-Object System.Drawing.Point(170, 260)
+$pullButton.Size = New-Object System.Drawing.Size(60, 23)
+$pullButton.Text = "拉取"
+$form.Controls.Add($pullButton)
+
 # 拖入时鼠标样式
 $form.Add_DragEnter({
     param($sender, $e)
@@ -55,14 +62,14 @@ $form.Add_DragEnter({
     }
 })
 
-# 拖入文件后处理
+# 拖入文件后处理（上传）
 $form.Add_DragDrop({
     param($sender, $e)
     $files = $e.Data.GetData([Windows.Forms.DataFormats]::FileDrop)
     $label.Text = "检测到文件：" + ($files | ForEach-Object { [IO.Path]::GetFileName($_) }) -join "`n"
 
-    # 提交说明
-    $msg = [System.Windows.Forms.MessageBox]::Show("是否输入提交说明？选择`"是`"输入，否则使用默认","提交说明", [System.Windows.Forms.MessageBoxButtons]::YesNo)
+    # 提交说明输入
+    $msg = [System.Windows.Forms.MessageBox]::Show("是否输入提交说明？选择`"是`"输入，否则使用默认", "提交说明", [System.Windows.Forms.MessageBoxButtons]::YesNo)
     if ($msg -eq [System.Windows.Forms.DialogResult]::Yes) {
         $inputBox = New-Object System.Windows.Forms.Form
         $inputBox.Text = "请输入提交说明"
@@ -89,8 +96,10 @@ $form.Add_DragDrop({
         $commitMsg = "auto commit"
     }
 
-    # Git 操作
+    # 执行 Git 上传操作
     try {
+        Set-Location -Path "E:\codes\Java\JavaCourse_2025\ffub"
+
         foreach ($f in $files) {
             Write-Host "添加文件：$f"
             git add "`"$f`""
@@ -99,7 +108,6 @@ $form.Add_DragDrop({
         Write-Host "提交信息：$commitMsg"
         git commit -m $commitMsg
 
-        # 根据平台选择远程仓库
         $platform = $comboBox.SelectedItem.ToString()
         if ($platform -eq "Gitee") {
             git push gitee master
@@ -107,10 +115,31 @@ $form.Add_DragDrop({
             git push github master
         }
 
-        [System.Windows.Forms.MessageBox]::Show("上传完成！","成功",[System.Windows.Forms.MessageBoxButtons]::OK,[System.Windows.Forms.MessageBoxIcon]::Information)
+        [System.Windows.Forms.MessageBox]::Show("上传完成！", "成功", [System.Windows.Forms.MessageBoxButtons]::OK, [System.Windows.Forms.MessageBoxIcon]::Information)
     }
     catch {
-        [System.Windows.Forms.MessageBox]::Show("上传失败：$($_.Exception.Message)","错误",[System.Windows.Forms.MessageBoxButtons]::OK,[System.Windows.Forms.MessageBoxIcon]::Error)
+        [System.Windows.Forms.MessageBox]::Show("上传失败：$($_.Exception.Message)", "错误", [System.Windows.Forms.MessageBoxButtons]::OK, [System.Windows.Forms.MessageBoxIcon]::Error)
+    }
+})
+
+# 拉取按钮点击事件
+$pullButton.Add_Click({
+    try {
+        Set-Location -Path "E:\codes\Java\JavaCourse_2025\ffub"
+
+        $platform = $comboBox.SelectedItem.ToString()
+        if ($platform -eq "Gitee") {
+            $pullResult = git pull gitee master 2>&1
+        } elseif ($platform -eq "GitHub") {
+            $pullResult = git pull github master 2>&1
+        } else {
+            throw "未知平台：$platform"
+        }
+
+        [System.Windows.Forms.MessageBox]::Show("拉取完成！`n`n输出：`n$pullResult", "成功", [System.Windows.Forms.MessageBoxButtons]::OK, [System.Windows.Forms.MessageBoxIcon]::Information)
+    }
+    catch {
+        [System.Windows.Forms.MessageBox]::Show("拉取失败：$($_.Exception.Message)", "错误", [System.Windows.Forms.MessageBoxButtons]::OK, [System.Windows.Forms.MessageBoxIcon]::Error)
     }
 })
 
